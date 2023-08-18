@@ -84,7 +84,9 @@ const mysqlCont = mysql.createConnection({
     database: process.env.SQL_DATABASE
 })
 
-mysqlCont.connect((err) => {
+const mysqlCont2 = mysql.createConnection(`${process.env.DB_LINK}`)
+
+mysqlCont2.connect((err) => {
     if (err) throw err
 
     console.log("mysql successfully connected");
@@ -94,7 +96,7 @@ app.use(bodyParser.json())
 
 app.get("/user", (request, response) => {
     
-    mysqlCont.query(
+    mysqlCont2.query(
         "select * from user", (err, result, fields) => {
             if (err) {
                 console.error(err)
@@ -113,18 +115,18 @@ app.get("/user", (request, response) => {
 
 app.get("/user/:id", (request, response) => {
     
-    mysqlCont.query(
+    mysqlCont2.query(
         `SELECT u.id, u.name, u.address,
         (SELECT sum(t.amount) - 
             (SELECT sum(t.amount) 
             FROM transaction t 
-            WHERE t.type = "expense")
+            WHERE t.type = "expense" and t.user_id = ${request.params.id} )
         FROM transaction t 
-        WHERE t.type = "income" ) as balance,
+        WHERE t.type = "income" and t.user_id = ${request.params.id} ) as balance,
         
         (select sum(t.amount) 
             from transaction t 
-            where t.type = "expense") as expense
+            where t.type = "expense" and t.user_id = ${request.params.id} ) as expense
         from user as u, transaction as t
         WHERE u.id = ${request.params.id} 
         GROUP by u.id`, (err, result, fields) => {
@@ -134,7 +136,7 @@ app.get("/user/:id", (request, response) => {
                 response.end()
                 return
             }
-            if(result.findIndex){
+            if(result){
                 console.log("transaction successfully connected", result);
                 response.status(200).json(commonResponse(result, null))
                 response.end()
@@ -149,7 +151,7 @@ app.post("/transaction", (request, response) => {
     const {type, amount, user_id} = request.body
     console.log(request.body);
     
-    mysqlCont.query(
+    mysqlCont2.query(
         `INSERT INTO transaction
         (user_id, type, amount)
         VALUES(${user_id}, "${type}", ${amount})`
@@ -166,11 +168,32 @@ app.post("/transaction", (request, response) => {
         })
 })
 
+// app.post("/user", (request, response) => {
+//     const {type, amount, user_id} = request.body
+//     // const name: void
+//     console.log(request.body);
+    
+//     mysqlCont2.query(
+//         `INSERT INTO user
+//         (name="${name}", address="${address}")
+//         VALUES("${name}", "${address}")`, (err, result, fields) => {
+//             if (err) {
+//                 console.error(err)
+//                 response.status(500).json(commonResponse(null, "response error"))
+//                 response.end()
+//                 return
+//             }
+//             console.log("transaction successfully connected", result);
+//             response.status(200).json(commonResponse(result.insertId, null))
+//             response.end()
+//         })
+// })
+
 app.put("/transaction/:id", (request, response) => {
    const {type, amount, user_id} = request.body
    console.log(request.body)
    
-   mysqlCont.query(
+   mysqlCont2.query(
     `UPDATE transaction
     SET user_id=${user_id}, type='${type}', amount=${amount}
     WHERE id=${request.params.id}`,
@@ -193,7 +216,7 @@ app.put("/transaction/:id", (request, response) => {
 })
 
 app.delete("/transaction/:id", (request, response) => {
-   mysqlCont.query(
+   mysqlCont2.query(
     `DELETE FROM transaction
     WHERE id = ${request.params.id}`,
         (err, result, fields) => {
