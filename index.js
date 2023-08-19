@@ -76,15 +76,15 @@ const commonResponse = function (data, error) {
     }
 }
 
-const mysqlCont = mysql.createConnection({
+const mysqlCont2 = mysql.createConnection({
     host: process.env.SQL_HOST,
-    port: process.env.SQL_PORT,
+    port: parseInt(process.env.SQL_PORT),
     user: process.env.SQL_USER,
     password: process.env.SQL_PASSWORD,
     database: process.env.SQL_DATABASE
 })
 
-const mysqlCont2 = mysql.createConnection(`${process.env.DB_LINK}`)
+// const mysqlCont2 = mysql.createConnection(`${process.env.DB_LINK}`)
 
 mysqlCont2.connect((err) => {
     if (err) throw err
